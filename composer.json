@@ -1,7 +1,7 @@
 {
-  "name": "matanyadaev/laravel-eloquent-spatial",
+  "name": "adsysco/laravel-eloquent-spatial",
   "description": "Spatial library for Laravel",
-  "homepage": "https://github.com/matanyadaev/laravel-eloquent-spatial",
+  "homepage": "https://github.com/adsysco/laravel-eloquent-spatial",
   "license": "MIT",
   "authors": [
     {
