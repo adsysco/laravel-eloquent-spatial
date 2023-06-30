@@ -7,16 +7,13 @@ namespace MatanYadaev\EloquentSpatial\Objects;
 use geoPHP;
 use Illuminate\Contracts\Database\Eloquent\Castable;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
-use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
-use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Traits\Macroable;
 use InvalidArgumentException;
 use JsonException;
 use JsonSerializable;
-use MatanYadaev\EloquentSpatial\AxisOrder;
 use MatanYadaev\EloquentSpatial\Factory;
 use MatanYadaev\EloquentSpatial\GeometryCast;
 use Stringable;
@@ -69,13 +66,13 @@ abstract class Geometry implements Castable, Arrayable, Jsonable, JsonSerializab
    *
    * @throws InvalidArgumentException
    */
-  public static function fromWkb(string $wkb): static
+  public static function fromWkb(string $wkb, int $srid): static
   {
-    $srid = substr($wkb, 0, 4);
+    // $srid = substr($wkb, 0, 4);
     // @phpstan-ignore-next-line
-    $srid = unpack('L', $srid)[1];
+    // $srid = unpack('L', $srid)[1];
 
-    $wkb = substr($wkb, 4);
+    // $wkb = substr($wkb, 4);
 
     $geometry = Factory::parse($wkb);
     $geometry->srid = $srid;
@@ -129,19 +126,6 @@ abstract class Geometry implements Castable, Arrayable, Jsonable, JsonSerializab
     }
 
     return $geometry;
-  }
-
-  /**
-   * @param  array<mixed>  $geometry
-   * @return static
-   *
-   * @throws JsonException
-   */
-  public static function fromArray(array $geometry): static
-  {
-    $geoJson = json_encode($geometry, JSON_THROW_ON_ERROR);
-
-    return static::fromJson($geoJson);
   }
 
   /**
@@ -209,19 +193,20 @@ abstract class Geometry implements Castable, Arrayable, Jsonable, JsonSerializab
   }
 
   /**
-   * @param  ConnectionInterface  $connection
-   * @return ExpressionContract
+   * @return Point
    */
-  public function toSqlExpression(ConnectionInterface $connection): ExpressionContract
+  public function getCenter(): Point
   {
-    $wkt = $this->toWkt();
-
-    if (! (new AxisOrder)->supported($connection)) {
-      // @codeCoverageIgnoreStart
-      return DB::raw("ST_GeomFromText('{$wkt}', {$this->srid})");
-      // @codeCoverageIgnoreEnd
-    }
-
-    return DB::raw("ST_GeomFromText('{$wkt}', {$this->srid}, 'axis-order=long-lat')");
+    return Geometry::fromWKt(DB::select(DB::raw("DECLARE @g geography = '{$this->toWkt()}'; SELECT @g.EnvelopeCenter().ToString() as center;"))[0]->center, 4326);
+  }
+  
+  /**
+   * Get a point that is guaranteed to be in the shape.
+   *
+   * @return Point
+   */
+  public function getPointOnService(): Point
+  {
+    return Geometry::fromWkt(DB::select(DB::raw("DECLARE @g geometry = '{$this->toWkt()}'; SELECT @g.STPointOnSurface().ToString() as point;"))[0]->point, 4326);
   }
 }

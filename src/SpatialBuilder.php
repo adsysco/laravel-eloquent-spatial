@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace MatanYadaev\EloquentSpatial;
 
-use Illuminate\Contracts\Database\Query\Expression as ExpressionContract;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Facades\DB;
 use MatanYadaev\EloquentSpatial\Objects\Geometry;
 
@@ -18,20 +18,17 @@ use MatanYadaev\EloquentSpatial\Objects\Geometry;
  */
 class SpatialBuilder extends Builder
 {
-  public function withDistance(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-    string $alias = 'distance'
-  ): self {
+  public function withDistance(string $column, Geometry|string $geometryOrColumn, string $alias = 'distance'): self
+  {
     if (! $this->getQuery()->columns) {
       $this->select('*');
     }
 
     $this->selectRaw(
       sprintf(
-        'ST_DISTANCE(%s, %s) AS %s',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
+        '(SELECT %s.STDistance(%s)) AS %s',
+        $this->getQuery()->getGrammar()->wrap($column),
+        $this->toExpression($geometryOrColumn),
         $alias,
       )
     );
@@ -39,258 +36,244 @@ class SpatialBuilder extends Builder
     return $this;
   }
 
-  public function whereDistance(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-    string $operator,
-    int|float $value
-  ): self {
+  // public function whereDistance(
+  //   string $column,
+  //   Geometry|string $geometryOrColumn,
+  //   string $operator,
+  //   int|float $value
+  // ): self
+  // {
+  //   $this->whereRaw(
+  //     sprintf(
+  //       'STDistance(%s, %s) %s ?',
+  //       $this->getQuery()->getGrammar()->wrap($column),
+  //       $this->toExpression($geometryOrColumn),
+  //       $operator,
+  //     ),
+  //     [$value],
+  //   );
+
+  //   return $this;
+  // }
+
+  // public function orderByDistance(
+  //   string $column,
+  //   Geometry|string $geometryOrColumn,
+  //   string $direction = 'asc'
+  // ): self
+  // {
+  //   $this->orderByRaw(
+  //     sprintf(
+  //       'STDistance(%s, %s) %s',
+  //       $this->getQuery()->getGrammar()->wrap($column),
+  //       $this->toExpression($geometryOrColumn),
+  //       $direction,
+  //     )
+  //   );
+
+  //   return $this;
+  // }
+
+  // public function withDistanceSphere(
+  //   string $column,
+  //   Geometry|string $geometryOrColumn,
+  //   string $alias = 'distance'
+  // ): self
+  // {
+  //   if (! $this->getQuery()->columns) {
+  //     $this->select('*');
+  //   }
+
+  //   $this->selectRaw(
+  //     sprintf(
+  //       'STDistanceSphere(%s, %s) AS %s',
+  //       $this->getQuery()->getGrammar()->wrap($column),
+  //       $this->toExpression($geometryOrColumn),
+  //       $alias,
+  //     )
+  //   );
+
+  //   return $this;
+  // }
+
+  // public function whereDistanceSphere(
+  //   string $column,
+  //   Geometry|string $geometryOrColumn,
+  //   string $operator,
+  //   int|float $value
+  // ): self
+  // {
+  //   $this->whereRaw(
+  //     sprintf(
+  //       'ST_DISTANCE_SPHERE(%s, %s) %s ?',
+  //       $this->getQuery()->getGrammar()->wrap($column),
+  //       $this->toExpression($geometryOrColumn),
+  //       $operator,
+  //     ),
+  //     [$value],
+  //   );
+
+  //   return $this;
+  // }
+
+  // public function orderByDistanceSphere(
+  //   string $column,
+  //   Geometry|string $geometryOrColumn,
+  //   string $direction = 'asc'
+  // ): self
+  // {
+  //   $this->orderByRaw(
+  //     sprintf(
+  //       'ST_DISTANCE_SPHERE(%s, %s) %s',
+  //       $this->getQuery()->getGrammar()->wrap($column),
+  //       $this->toExpression($geometryOrColumn),
+  //       $direction
+  //     )
+  //   );
+
+  //   return $this;
+  // }
+
+  // public function whereWithin(string $column, Geometry|string $geometryOrColumn): self
+  // {
+  //   $this->whereRaw(
+  //     sprintf(
+  //       'STWithin(%s, %s)',
+  //       $this->getQuery()->getGrammar()->wrap($column),
+  //       $this->toExpression($geometryOrColumn),
+  //     )
+  //   );
+
+  //   return $this;
+  // }
+
+  // public function whereNotWithin(string $column, Geometry|string $geometryOrColumn): self
+  // {
+  //   $this->whereRaw(
+  //     sprintf(
+  //       'STWithin(%s, %s) = 0',
+  //       $this->getQuery()->getGrammar()->wrap($column),
+  //       $this->toExpression($geometryOrColumn),
+  //     )
+  //   );
+
+  //   return $this;
+  // }
+
+  public function whereContains(string $column, Geometry|string $geometryOrColumn): self
+  {
     $this->whereRaw(
       sprintf(
-        'ST_DISTANCE(%s, %s) %s ?',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-        $operator,
-      ),
-      [$value],
-    );
-
-    return $this;
-  }
-
-  public function orderByDistance(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-    string $direction = 'asc'
-  ): self {
-    $this->orderByRaw(
-      sprintf(
-        'ST_DISTANCE(%s, %s) %s',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-        $direction,
+        '(SELECT %s.STContains(%s)) = 1',
+        $this->getQuery()->getGrammar()->wrap($column),
+        $this->toExpression($geometryOrColumn),
       )
     );
 
     return $this;
   }
 
-  public function withDistanceSphere(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-    string $alias = 'distance'
-  ): self {
-    if (! $this->getQuery()->columns) {
-      $this->select('*');
-    }
+  // public function whereNotContains(string $column, Geometry|string $geometryOrColumn): self
+  // {
+  //   $this->whereRaw(
+  //     sprintf(
+  //       'STContains(%s, %s) = 0',
+  //       $this->getQuery()->getGrammar()->wrap($column),
+  //       $this->toExpression($geometryOrColumn),
+  //     )
+  //   );
 
-    $this->selectRaw(
-      sprintf(
-        'ST_DISTANCE_SPHERE(%s, %s) AS %s',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-        $alias,
-      )
-    );
+  //   return $this;
+  // }
 
-    return $this;
-  }
+  // public function whereTouches(string $column, Geometry|string $geometryOrColumn): self
+  // {
+  //   $this->whereRaw(
+  //     sprintf(
+  //       'STContains(%s, %s)',
+  //       $this->getQuery()->getGrammar()->wrap($column),
+  //       $this->toExpression($geometryOrColumn),
+  //     )
+  //   );
 
-  public function whereDistanceSphere(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-    string $operator,
-    int|float $value
-  ): self {
+  //   return $this;
+  // }
+
+  public function whereIntersects(string $column, Geometry|string $geometryOrColumn): self
+  {
     $this->whereRaw(
       sprintf(
-        'ST_DISTANCE_SPHERE(%s, %s) %s ?',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-        $operator,
-      ),
-      [$value],
-    );
-
-    return $this;
-  }
-
-  public function orderByDistanceSphere(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-    string $direction = 'asc'
-  ): self {
-    $this->orderByRaw(
-      sprintf(
-        'ST_DISTANCE_SPHERE(%s, %s) %s',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-        $direction
+        '(SELECT %s.STIntersects(%s)) = 1',
+        $this->getQuery()->getGrammar()->wrap($column),
+        $this->toExpression($geometryOrColumn),
       )
     );
 
     return $this;
   }
 
-  public function whereWithin(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-  ): self {
-    $this->whereRaw(
-      sprintf(
-        'ST_WITHIN(%s, %s)',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-      )
-    );
+  // public function whereCrosses(string $column, Geometry|string $geometryOrColumn): self
+  // {
+  //   $this->whereRaw(
+  //     sprintf(
+  //       'STCrosses(%s, %s)',
+  //       $this->getQuery()->getGrammar()->wrap($column),
+  //       $this->toExpression($geometryOrColumn),
+  //     )
+  //   );
 
-    return $this;
-  }
+  //   return $this;
+  // }
 
-  public function whereNotWithin(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-  ): self {
-    $this->whereRaw(
-      sprintf(
-        'ST_WITHIN(%s, %s) = 0',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-      )
-    );
+  // public function whereDisjoint(string $column, Geometry|string $geometryOrColumn): self
+  // {
+  //   $this->whereRaw(
+  //     sprintf(
+  //       'STDisjoint(%s, %s)',
+  //       $this->getQuery()->getGrammar()->wrap($column),
+  //       $this->toExpression($geometryOrColumn),
+  //     )
+  //   );
 
-    return $this;
-  }
+  //   return $this;
+  // }
 
-  public function whereContains(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-  ): self {
-    $this->whereRaw(
-      sprintf(
-        'ST_CONTAINS(%s, %s)',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-      )
-    );
+  // public function whereOverlaps(string $column, Geometry|string $geometryOrColumn): self
+  // {
+  //   $this->whereRaw(
+  //     sprintf(
+  //       'STOverlaps(%s, %s)',
+  //       $this->getQuery()->getGrammar()->wrap($column),
+  //       $this->toExpression($geometryOrColumn),
+  //     )
+  //   );
 
-    return $this;
-  }
+  //   return $this;
+  // }
 
-  public function whereNotContains(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-  ): self {
-    $this->whereRaw(
-      sprintf(
-        'ST_CONTAINS(%s, %s) = 0',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-      )
-    );
+  // public function whereEquals(string $column, Geometry|string $geometryOrColumn): self
+  // {
+  //   $this->whereRaw(
+  //     sprintf(
+  //       'STEquals(%s, %s)',
+  //       $this->getQuery()->getGrammar()->wrap($column),
+  //       $this->toExpression($geometryOrColumn),
+  //     )
+  //   );
 
-    return $this;
-  }
-
-  public function whereTouches(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-  ): self {
-    $this->whereRaw(
-      sprintf(
-        'ST_TOUCHES(%s, %s)',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-      )
-    );
-
-    return $this;
-  }
-
-  public function whereIntersects(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-  ): self {
-    $this->whereRaw(
-      sprintf(
-        'ST_INTERSECTS(%s, %s)',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-      )
-    );
-
-    return $this;
-  }
-
-  public function whereCrosses(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-  ): self {
-    $this->whereRaw(
-      sprintf(
-        'ST_CROSSES(%s, %s)',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-      )
-    );
-
-    return $this;
-  }
-
-  public function whereDisjoint(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-  ): self {
-    $this->whereRaw(
-      sprintf(
-        'ST_DISJOINT(%s, %s)',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-      )
-    );
-
-    return $this;
-  }
-
-  public function whereOverlaps(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-  ): self {
-    $this->whereRaw(
-      sprintf(
-        'ST_OVERLAPS(%s, %s)',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-      )
-    );
-
-    return $this;
-  }
-
-  public function whereEquals(
-    ExpressionContract|Geometry|string $column,
-    ExpressionContract|Geometry|string $geometryOrColumn,
-  ): self {
-    $this->whereRaw(
-      sprintf(
-        'ST_EQUALS(%s, %s)',
-        $this->toExpressionString($column),
-        $this->toExpressionString($geometryOrColumn),
-      )
-    );
-
-    return $this;
-  }
+  //   return $this;
+  // }
 
   public function whereSrid(
-    ExpressionContract|Geometry|string $column,
+    string $column,
     string $operator,
     int|float $value
-  ): self {
+  ): self
+  {
     $this->whereRaw(
       sprintf(
-        'ST_SRID(%s) %s ?',
-        $this->toExpressionString($column),
+        'STSrid(%s) %s ?',
+        $this->getQuery()->getGrammar()->wrap($column),
         $operator,
       ),
       [$value],
@@ -299,33 +282,14 @@ class SpatialBuilder extends Builder
     return $this;
   }
 
-  public function withCentroid(
-    ExpressionContract|Geometry|string $column,
-    string $alias = 'centroid',
-  ): self {
-    $this->selectRaw(
-      sprintf(
-        'ST_CENTROID(%s) AS %s',
-        $this->toExpressionString($column),
-        $this->getGrammar()->wrap($alias),
-      )
-    );
-
-    return $this;
-  }
-
-  protected function toExpressionString(ExpressionContract|Geometry|string $geometryOrColumnOrExpression): string
+  protected function toExpression(Geometry|string $geometryOrColumn): Expression
   {
-    $grammar = $this->getGrammar();
+    if ($geometryOrColumn instanceof Geometry) {
+      $wkt = $geometryOrColumn->toWkt();
 
-    if ($geometryOrColumnOrExpression instanceof ExpressionContract) {
-      $expression = $geometryOrColumnOrExpression;
-    } elseif ($geometryOrColumnOrExpression instanceof Geometry) {
-      $expression = $geometryOrColumnOrExpression->toSqlExpression($this->getConnection());
-    } else {
-      $expression = DB::raw($grammar->wrap($geometryOrColumnOrExpression));
+      return DB::raw("geography::STGeomFromText('{$wkt}', {$geometryOrColumn->srid})");
     }
 
-    return (string) $expression->getValue($grammar);
+    return DB::raw($this->getQuery()->getGrammar()->wrap($geometryOrColumn));
   }
 }
